@@ -2,23 +2,22 @@ name: Sync Google Certs
 
 on:
   schedule:
-    # 国际标准时间每小时的第 0 分钟执行一次（大约每小时同步一次）
     - cron: '0 * * * *'
-  workflow_dispatch: # 允许你手动点击按钮触发同步
+  workflow_dispatch:
 
 jobs:
   sync_job:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4.2.2
+    # 不再使用 actions/checkout 插件，直接用纯原生命令克隆仓库
+    - name: Clone Repository
+      run: |
+        git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
 
     - name: Download Google Public Key
       run: |
-        # 建立存放证书的文件夹
         mkdir -p certs
-        # 下载谷歌真实的 JWK 证书文件
         curl -fSsL "https://www.googleapis.com/oauth2/v3/certs" -o certs/google_auth_certs.json
 
     - name: Commit and Push
@@ -27,7 +26,6 @@ jobs:
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
         git add certs/google_auth_certs.json
-        # 检查文件是否有修改，有修改才提交
         if git diff --staged --quiet; then
           echo "证书没有发生变化，跳过本次更新。"
         else
