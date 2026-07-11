@@ -1,4 +1,4 @@
-name: Sync Google Certs
+name: Sync Google Certs to GitHub and Gitee
 
 on:
   schedule:
@@ -10,25 +10,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 不再使用 actions/checkout 插件，直接用纯原生命令克隆仓库
+    # 1. 克隆 GitHub 仓库
     - name: Clone Repository
       run: |
         git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
 
+    # 2. 从谷歌下载公钥
     - name: Download Google Public Key
       run: |
         mkdir -p certs
         curl -fSsL "https://www.googleapis.com/oauth2/v3/certs" -o certs/google_auth_certs.json
 
-    - name: Commit and Push
+    # 3. 提交到 GitHub，并强行同步到 Gitee
+    - name: Commit and Push to Both
+      env:
+        SSH_KEY: ${{ secrets.GITEE_SSH_KEY }}
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
         git add certs/google_auth_certs.json
-        if git diff --staged --quiet; then
-          echo "证书没有发生变化，跳过本次更新。"
-        else
+        
+        # 即使文件没变动，我们也允许脚本继续运行以防需要强行同步
+        if ! git diff --staged --quiet; then
           git commit -m "自动同步谷歌证书: $(date -u +'%Y-%m-%d %H:%M:%S') UTC"
-          git push
+          git push origin main
         fi
+
+        # 配置 Gitee 的 SSH 密钥环境
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan gitee.com >> ~/.ssh/known_hosts
+        
+        # 将最新的代码强行推送到 Gitee 的 main 分支
+        # ⚠️请将下面的“你的Gitee用户名”和“你的Gitee仓库名”改成真实的！
+        git remote add gitee git@gitee.com:tanggao1314/google-certs-mirror.git
+        git push -f gitee main
