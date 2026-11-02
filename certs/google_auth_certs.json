@@ -5,8 +5,8 @@
       "e": "AQAB",
       "alg": "RS256",
       "kty": "RSA",
-      "use": "sig",
-      "kid": "943a3a5d7d919625a454e489b75c29adab57acba"
+      "kid": "943a3a5d7d919625a454e489b75c29adab57acba",
+      "use": "sig"
     }
   ]
 }
